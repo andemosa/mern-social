@@ -1,4 +1,4 @@
-import { Model, Schema, model } from "mongoose";
+import { Model, Schema, model, Types } from "mongoose";
 import argon2 from "argon2";
 
 // 1. Create an interface representing a document in MongoDB.
@@ -6,6 +6,10 @@ interface IUser {
   name: string;
   email: string;
   password: string;
+  about: string;
+  photo: string;
+  following: Types.DocumentArray<IUser>;
+  followers: Types.DocumentArray<IUser>;
 }
 
 interface IUserMethods {
@@ -19,7 +23,17 @@ const schema = new Schema<IUser, UserModel, IUserMethods>(
   {
     email: { type: String, required: true, unique: true },
     name: { type: String, required: true },
-    password: { type: String, required: true, select: false },
+    password: { type: String, required: true },
+    about: {
+      type: String,
+      trim: true,
+    },
+    photo: {
+      data: Buffer,
+      contentType: String,
+    },
+    following: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    followers: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   {
     timestamps: true,
@@ -38,18 +52,18 @@ schema.pre("save", async function (next) {
   return next();
 });
 
-schema.pre("findOneAndUpdate", async function (next) {
-  try {
-    if (this._update.password) {
-      const hash = await argon2.hash(this._update.password);
+// schema.pre("findOneAndUpdate", async function (next) {
+//   try {
+//     if (this._update.password) {
+//       const hash = await argon2.hash(this._update.password);
 
-      this._update.password = hash;
-    }
-    next();
-  } catch (err: any) {
-    return next(err);
-  }
-});
+//       this._update.password = hash;
+//     }
+//     next();
+//   } catch (err: any) {
+//     return next(err);
+//   }
+// });
 
 schema.method(
   "comparePassword",

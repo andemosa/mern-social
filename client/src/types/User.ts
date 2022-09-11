@@ -10,4 +10,13 @@ export interface IProfile {
   name: string;
   createdAt: string;
   updatedAt: string;
+  photo: {
+    contentType: string;
+    data: {
+      type: string;
+      data: number[];
+    };
+  };
+  followers: string[];
+  following: string[];
 }

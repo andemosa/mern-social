@@ -5,7 +5,7 @@ import userController from "../controllers/user.controller";
 import validate from "../middleware/validateResource";
 
 import { createUserSchema } from "../schema/user.schema";
-import { verifyToken } from "../utils/verifyToken";
+import { isOwner, verifyToken } from "../utils/verifyToken";
 
 const router = express.Router();
 
@@ -17,7 +17,7 @@ router
 router
   .route("/api/users/:id")
   .get(userController.read)
-  .put(verifyToken, userController.update)
-  .delete(verifyToken, userController.remove);
+  .put(verifyToken, isOwner, userController.update)
+  .delete(verifyToken, isOwner, userController.remove);
 
 export default router;

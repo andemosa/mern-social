@@ -1,4 +1,7 @@
 import { NextFunction, Request, Response } from "express";
+import formidable from "formidable";
+import fs from "fs";
+import { extend } from "lodash";
 
 import { User } from "../models/user.model";
 
@@ -62,33 +65,39 @@ const read = async (req: Request, res: Response) => {
 
 const update = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.params.id;
-  const update = req.body;
-  if (req.params.id === res.locals.auth.id) {
-    try {
-      const updatedUser = await User.findOneAndUpdate({ _id: userId }, update, {
-        new: true,
+  let user = await User.findById(userId);
+
+  let form = new formidable.IncomingForm();
+  form.keepExtensions = true;
+  form.parse(req, async (err, fields, files) => {
+    if (err) {
+      return res.status(400).json({
+        error: "Photo could not be uploaded",
       });
-      res.status(200).json(updatedUser);
+    }
+
+    user = extend(user, fields);
+
+    if (files.photo) {
+      user.photo.data = fs.readFileSync(files.photo.path);
+      user.photo.contentType = files.photo.type;
+    }
+    try {
+      await user.save();
+      user.password = undefined;
+      res.status(200).json(user);
     } catch (err) {
       next(err);
     }
-  } else {
-    return res.status(403).json({
-      error: "You can update only your account!",
-    });
-  }
+  });
 };
 
 const remove = async (req: Request, res: Response, next: NextFunction) => {
-  if (req.params.id === res.locals.auth.id) {
-    try {
-      await User.findByIdAndDelete(req.params.id);
-      res.status(200).json("User has been deleted.");
-    } catch (err) {
-      next(err);
-    }
-  } else {
-    return res.status(403).json("You can delete only your account!");
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.status(200).json("User has been deleted.");
+  } catch (err) {
+    next(err);
   }
 };
 

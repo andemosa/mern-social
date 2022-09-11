@@ -55,7 +55,7 @@ const read = async (
 const update = async (
   params: { userId: string },
   credentials: { t: string },
-  user: Partial<IUser>
+  user: FormData
 ) => {
   try {
     let response = await fetch(
@@ -64,10 +64,9 @@ const update = async (
         method: "PUT",
         headers: {
           Accept: "application/json",
-          "Content-Type": "application/json",
           Authorization: "Bearer " + credentials.t,
         },
-        body: JSON.stringify(user),
+        body: user,
       }
     );
     return await response.json();
