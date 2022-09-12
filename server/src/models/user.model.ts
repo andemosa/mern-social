@@ -7,7 +7,10 @@ interface IUser {
   email: string;
   password: string;
   about: string;
-  photo: string;
+  photo: {
+    data: any;
+    contentType: string;
+  };
   following: Types.DocumentArray<IUser>;
   followers: Types.DocumentArray<IUser>;
 }

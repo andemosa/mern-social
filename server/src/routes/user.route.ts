@@ -14,6 +14,24 @@ router
   .get(userController.list)
   .post(validate(createUserSchema), userController.create);
 
+router.route("/api/users/photo/:id").get(userController.photo);
+
+router
+  .route("/api/users/follow")
+  .put(verifyToken, userController.addFollowing, userController.addFollower);
+  
+router
+  .route("/api/users/unfollow")
+  .put(
+    verifyToken,
+    userController.removeFollowing,
+    userController.removeFollower
+  );
+
+router
+  .route("/api/users/findpeople/:userId")
+  .get(verifyToken, userController.findPeople);
+
 router
   .route("/api/users/:id")
   .get(userController.read)

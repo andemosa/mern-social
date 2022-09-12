@@ -33,7 +33,7 @@ export const isOwner = (req: Request, res: Response, next: NextFunction) => {
     next();
   } else {
     return res.status(403).json({
-      error: "You can update only your account!",
+      error: "User is not authorized",
     });
   }
 };

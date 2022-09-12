@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
-import { Person, Edit } from "@mui/icons-material";
+import { Edit } from "@mui/icons-material";
 import {
   Paper,
   Typography,
@@ -19,11 +19,13 @@ import { read } from "./api-user";
 
 import { IProfile } from "types/User";
 import DeleteUser from "./DeleteUser";
+import FollowProfileButton from "./FollowProfileButton";
 
 interface IState {
   user: Partial<IProfile>;
   redirectToSignin: boolean;
   following: boolean;
+  error?: any;
 }
 
 export default function Profile() {
@@ -35,6 +37,16 @@ export default function Profile() {
   });
   const [posts, setPosts] = useState([]);
   const jwt = auth.isAuthenticated();
+
+  const checkFollow = useMemo(
+    () => (user: { followers: IProfile[] }) => {
+      const match = user?.followers.some((follower) => {
+        return follower._id === jwt.user?._id;
+      });
+      return match;
+    },
+    [jwt.user?._id]
+  );
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -52,32 +64,31 @@ export default function Profile() {
       } else {
         let following = checkFollow(data);
         setValues({ ...values, user: data, following: following });
-        loadPosts(data._id);
+        // loadPosts(data._id);
       }
     });
 
     return function cleanup() {
       abortController.abort();
     };
-  }, [jwt.token, params.userId]);
+  }, [checkFollow, jwt.token, params.userId]);
 
-  const checkFollow = (user) => {
-    const match = user.followers.some((follower) => {
-      return follower._id == jwt.user._id;
-    });
-    return match;
-  };
-
-  const clickFollowButton = (callApi) => {
+  const clickFollowButton = (
+    callApi: (
+      arg0: { userId: string },
+      arg1: { t: string },
+      arg2: string
+    ) => Promise<any>
+  ) => {
     callApi(
       {
-        userId: jwt.user._id,
+        userId: jwt.user?._id,
       },
       {
         t: jwt.token,
       },
-      values.user._id
-    ).then((data) => {
+      values.user?._id!
+    ).then((data: any) => {
       if (data.error) {
         setValues({ ...values, error: data.error });
       } else {
@@ -86,36 +97,39 @@ export default function Profile() {
     });
   };
 
-  const loadPosts = (user) => {
-    listByUser(
-      {
-        userId: user,
-      },
-      {
-        t: jwt.token,
-      }
-    ).then((data) => {
-      if (data.error) {
-        console.log(data.error);
-      } else {
-        setPosts(data);
-      }
-    });
-  };
-  const removePost = (post) => {
-    const updatedPosts = posts;
-    const index = updatedPosts.indexOf(post);
-    updatedPosts.splice(index, 1);
-    setPosts(updatedPosts);
-  };
+  // const loadPosts = (user) => {
+  //   listByUser(
+  //     {
+  //       userId: user,
+  //     },
+  //     {
+  //       t: jwt.token,
+  //     }
+  //   ).then((data) => {
+  //     if (data.error) {
+  //       console.log(data.error);
+  //     } else {
+  //       setPosts(data);
+  //     }
+  //   });
+  // };
+  // const removePost = (post) => {
+  //   const updatedPosts = posts;
+  //   const index = updatedPosts.indexOf(post);
+  //   updatedPosts.splice(index, 1);
+  //   setPosts(updatedPosts);
+  // };
 
-  const photoUrl = values.user._id
-    ? `/api/users/photo/${values.user._id}?${new Date().getTime()}`
+  const photoUrl = values?.user?._id
+    ? `${process.env.REACT_APP_BASE_URL}/api/users/photo/${
+        values?.user?._id
+      }?${new Date().getTime()}`
     : "/api/users/defaultphoto";
 
   if (values.redirectToSignin) {
     return <Navigate to="/signin" />;
   }
+
   return (
     <Paper
       sx={{
@@ -147,30 +161,31 @@ export default function Profile() {
             />
           </ListItemAvatar>
           <ListItemText
-            primary={values.user.name}
-            secondary={values.user.email}
+            primary={values.user?.name}
+            secondary={values.user?.email}
           />{" "}
           {auth.isAuthenticated().user &&
           auth.isAuthenticated().user?._id === values?.user?._id ? (
             <ListItemSecondaryAction>
-              <Link to={"/user/edit/" + values.user._id}>
+              <Link to={"/user/edit/" + values.user?._id}>
                 <IconButton aria-label="Edit" color="primary">
                   <Edit />
                 </IconButton>
               </Link>
-              <DeleteUser userId={values.user._id!} />
+              <DeleteUser userId={values.user?._id!} />
             </ListItemSecondaryAction>
-          ) : // <FollowProfileButton
-          //   following={values.following}
-          //   onButtonClick={clickFollowButton}
-          // />
-          null}
+          ) : (
+            <FollowProfileButton
+              following={values.following}
+              onButtonClick={clickFollowButton}
+            />
+          )}
         </ListItem>
         <Divider />
         <ListItem>
           <ListItemText
             primary={
-              "Joined: " + new Date(values.user.createdAt!).toDateString()
+              "Joined: " + new Date(values.user?.createdAt!).toDateString()
             }
           />
         </ListItem>
