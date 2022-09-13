@@ -14,12 +14,12 @@ router
   .get(userController.list)
   .post(validate(createUserSchema), userController.create);
 
-router.route("/api/users/photo/:id").get(userController.photo);
+router.route("/api/users/photo/:userId").get(userController.photo);
 
 router
   .route("/api/users/follow")
   .put(verifyToken, userController.addFollowing, userController.addFollower);
-  
+
 router
   .route("/api/users/unfollow")
   .put(
@@ -33,9 +33,11 @@ router
   .get(verifyToken, userController.findPeople);
 
 router
-  .route("/api/users/:id")
+  .route("/api/users/:userId")
   .get(userController.read)
   .put(verifyToken, isOwner, userController.update)
   .delete(verifyToken, isOwner, userController.remove);
+
+router.param("userId", userController.userByID);
 
 export default router;

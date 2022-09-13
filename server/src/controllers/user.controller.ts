@@ -33,6 +33,33 @@ const create = async (
   }
 };
 
+/**
+ * Load user and append to req.
+ */
+const userByID = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  id: string
+) => {
+  try {
+    let user = await User.findById(id)
+      .populate("following", "_id name")
+      .populate("followers", "_id name")
+      .exec();
+    if (!user)
+      return res.status(400).json({
+        error: "User not found",
+      });
+    res.locals.profile = user;
+    next();
+  } catch (err) {
+    return res.status(400).json({
+      error: "Could not retrieve user",
+    });
+  }
+};
+
 const list = async (req: Request, res: Response) => {
   try {
     let users = await User.find().select("name email updatedAt createdAt");
@@ -45,29 +72,12 @@ const list = async (req: Request, res: Response) => {
 };
 
 const read = async (req: Request, res: Response) => {
-  try {
-    let user = await User.findById(req.params.id)
-      .select("name email updatedAt createdAt")
-      .populate("following", "_id name")
-      .populate("followers", "_id name")
-      .exec();
-
-    if (!user)
-      return res.status(400).json({
-        error: "User not found",
-      });
-
-    return res.json(user);
-  } catch (err) {
-    return res.status(400).json({
-      error: "Could not retrieve user",
-    });
-  }
+  res.locals.profile.password = undefined;
+  return res.json(res.locals.profile);
 };
 
 const update = async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.params.id;
-  let user = await User.findById(userId);
+  let user = res.locals.profile;
 
   let form = new formidable.IncomingForm();
   form.keepExtensions = true;
@@ -96,7 +106,7 @@ const update = async (req: Request, res: Response, next: NextFunction) => {
 
 const remove = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await User.findByIdAndDelete(req.params.id);
+    await User.findByIdAndDelete(req.params.userId);
     res.status(200).json("User has been deleted.");
   } catch (err) {
     next(err);
@@ -104,19 +114,14 @@ const remove = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 const photo = async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.params.id;
-  try {
-    let user = await User.findById(userId);
-    if (user && user.photo.data) {
-      res.set("Content-Type", user.photo.contentType);
-      return res.send(user.photo.data);
-    }
-    return res.status(400).json({
-      error: "Photo could not be found",
-    });
-  } catch (err) {
-    next(err);
+  let user = res.locals.profile;
+  if (user && user.photo.data) {
+    res.set("Content-Type", user.photo.contentType);
+    return res.send(user.photo.data);
   }
+  return res.status(400).json({
+    error: "Photo could not be found",
+  });
 };
 
 const addFollowing = async (
@@ -165,6 +170,7 @@ const removeFollowing = async (
     next(err);
   }
 };
+
 const removeFollower = async (
   req: Request,
   res: Response,
@@ -188,7 +194,7 @@ const removeFollower = async (
 
 const findPeople = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = res.locals.profile;
     let following = user!.following;
     following.push(user!._id);
 
@@ -201,6 +207,7 @@ const findPeople = async (req: Request, res: Response, next: NextFunction) => {
 
 export default {
   create,
+  userByID,
   read,
   list,
   remove,

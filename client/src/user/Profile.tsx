@@ -16,10 +16,12 @@ import {
 
 import auth from "auth/auth-helper";
 import { read } from "./api-user";
+import { listByUser } from "post/api-post";
 
-import { IProfile } from "types/User";
 import DeleteUser from "./DeleteUser";
 import FollowProfileButton from "./FollowProfileButton";
+
+import { IProfile } from "types/User";
 
 interface IState {
   user: Partial<IProfile>;
@@ -48,6 +50,26 @@ export default function Profile() {
     [jwt.user?._id]
   );
 
+  const loadPosts = useMemo(
+    () => (user: string) => {
+      listByUser(
+        {
+          userId: user,
+        },
+        {
+          t: jwt.token,
+        }
+      ).then((data) => {
+        if (data.error) {
+          console.log(data.error);
+        } else {
+          setPosts(data);
+        }
+      });
+    },
+    [jwt.token]
+  );
+
   useEffect(() => {
     const abortController = new AbortController();
     const signal = abortController.signal;
@@ -64,14 +86,14 @@ export default function Profile() {
       } else {
         let following = checkFollow(data);
         setValues({ ...values, user: data, following: following });
-        // loadPosts(data._id);
+        loadPosts(data._id);
       }
     });
 
     return function cleanup() {
       abortController.abort();
     };
-  }, [checkFollow, jwt.token, params.userId]);
+  }, [checkFollow, loadPosts, jwt.token, params.userId]);
 
   const clickFollowButton = (
     callApi: (
@@ -97,22 +119,6 @@ export default function Profile() {
     });
   };
 
-  // const loadPosts = (user) => {
-  //   listByUser(
-  //     {
-  //       userId: user,
-  //     },
-  //     {
-  //       t: jwt.token,
-  //     }
-  //   ).then((data) => {
-  //     if (data.error) {
-  //       console.log(data.error);
-  //     } else {
-  //       setPosts(data);
-  //     }
-  //   });
-  // };
   // const removePost = (post) => {
   //   const updatedPosts = posts;
   //   const index = updatedPosts.indexOf(post);
